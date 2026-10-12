@@ -40,6 +40,10 @@ if ($channelCode !== "CARDS" && !preg_match('/^09[0-9]{9}$/', $walletNumber)) {
     die("Enter a valid 11-digit mobile number.");
 }
 
+if ($channelCode !== "CARDS" && ($_POST["wallet_confirmed"] ?? "") !== "1") {
+    die("Please confirm your wallet payment before continuing.");
+}
+
 $referenceId = "ORDER-" . strtoupper(bin2hex(random_bytes(8)));
 $paymentMethod = $channelCode === "PAYMAYA" ? "MAYA" : $channelCode;
 $escapedReference = $conn->real_escape_string($referenceId);
