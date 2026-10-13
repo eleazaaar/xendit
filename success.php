@@ -8,7 +8,6 @@ $orderFound = false;
 
 if ($referenceId !== '' && strlen($referenceId) <= 100) {
     $order = $XenditModel->getOrderByReference($referenceId);
-    // print_r($order); die;
     if (is_array($order) && !empty($order)) {
         $orderFound = true;
         $status = strtoupper(trim($order['status'] ?? ''));
