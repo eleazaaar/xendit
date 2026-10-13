@@ -1,96 +1,95 @@
 <?php
-date_default_timezone_set("Asia/Manila");
+$amount = filter_input(INPUT_POST, 'amount', FILTER_VALIDATE_FLOAT);
+$method = strtoupper(trim($_POST['payment_method'] ?? ''));
+$walletNumber = '';
 
-if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-    header("Location: index.php");
+if (!in_array($method, ['GCASH', 'PAYMAYA'], true)) {
+    header('Location: index.php');
     exit;
 }
 
-$amount = isset($_POST["amount"]) ? (float) $_POST["amount"] : 0;
-$channelCode = strtoupper(trim($_POST["channel_code"] ?? ""));
-
-if (!is_finite($amount) || $amount < 1 || $amount > 50000) {
-    die("Invalid payment amount. Please return to checkout.");
+if ($amount === false || $amount === null || $amount < 1 || $amount > 50000) {
+    exit('Invalid payment amount. Please return to checkout.');
 }
 
-if (!in_array($channelCode, ["GCASH", "PAYMAYA"], true)) {
-    die("Invalid wallet payment method.");
-}
-
-if ($channelCode === "GCASH") {
-    $walletNumber = trim($_POST["gcash_number"] ?? "");
-    $walletName = "GCash";
-} else {
-    $walletNumber = trim($_POST["maya_number"] ?? "");
-    $walletName = "Maya";
-}
-
+$walletNumber = trim($method === 'GCASH' ? ($_POST['gcash_number'] ?? '') : ($_POST['maya_number'] ?? ''));
 if (!preg_match('/^09[0-9]{9}$/', $walletNumber)) {
-    die("Invalid mobile number. Please return to checkout.");
+    exit('Invalid mobile number. Please return to checkout and try again.');
 }
 
-$maskedNumber = substr($walletNumber, 0, 2) . "****" . substr($walletNumber, -4);
-$formattedAmount = number_format($amount, 2, ".", "");
-$escapedAmount = htmlspecialchars($formattedAmount, ENT_QUOTES, "UTF-8");
-$escapedMethod = htmlspecialchars($walletName, ENT_QUOTES, "UTF-8");
-$escapedNumber = htmlspecialchars($maskedNumber, ENT_QUOTES, "UTF-8");
-$escapedChannel = htmlspecialchars($channelCode, ENT_QUOTES, "UTF-8");
-$escapedWalletNumber = htmlspecialchars($walletNumber, ENT_QUOTES, "UTF-8");
+$provider = $method === 'GCASH' ? 'GCash' : 'Maya';
+$maskedNumber = substr($walletNumber, 0, 4) . '****' . substr($walletNumber, -3);
+$formattedAmount = number_format($amount, 2);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirm Wallet Payment</title>
+    <title>Confirm Payment | Xendit</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; padding: 30px 15px; background: #f3f5f9; font-family: Arial, sans-serif; color: #202938; }
-        .container { max-width: 460px; margin: 0 auto; padding: 28px; background: #fff; border-radius: 14px; box-shadow: 0 5px 24px rgba(0,0,0,.08); }
-        .badge { display: inline-block; padding: 7px 10px; background: #fff4db; color: #825500; border-radius: 6px; font-size: 12px; font-weight: bold; }
-        h1 { font-size: 24px; margin: 18px 0 8px; }
-        .subtitle { color: #667085; font-size: 14px; line-height: 1.5; }
-        .amount { margin: 25px 0; padding: 22px; text-align: center; border-radius: 10px; background: #f4f7ff; }
-        .amount small { display: block; color: #667085; margin-bottom: 8px; }
-        .amount strong { font-size: 32px; }
-        .detail { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid #eaecf0; font-size: 14px; }
-        .detail span:first-child { color: #667085; }
-        .detail span:last-child { font-weight: bold; text-align: right; }
-        .notice { margin-top: 20px; padding: 12px; background: #fef3f2; color: #912018; border-radius: 8px; font-size: 13px; line-height: 1.5; }
-        button, .back { display: block; width: 100%; padding: 14px; margin-top: 18px; border: 0; border-radius: 8px; text-align: center; text-decoration: none; font-size: 15px; font-weight: bold; cursor: pointer; }
-        button { background: #3867d6; color: white; }
-        .back { background: #eef1f5; color: #344054; }
+        body { margin: 0; padding: 30px 15px; font-family: Arial, sans-serif; color: #172033; background: #f3f6fc; }
+        .container { max-width: 500px; margin: 35px auto; padding: 30px; background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 15px 45px rgba(31,54,92,.09); }
+        .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; font-size: 19px; font-weight: 800; }
+        .brand-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #2563eb; color: #fff; }
+        .icon { display: grid; place-items: center; width: 58px; height: 58px; margin-bottom: 18px; border-radius: 16px; background: #eff6ff; color: #2563eb; font-size: 26px; font-weight: bold; }
+        h1 { margin: 0 0 9px; font-size: 26px; letter-spacing: -.5px; }
+        .subtitle { margin: 0 0 25px; color: #64748b; font-size: 14px; line-height: 1.6; }
+        .amount-box { padding: 20px; text-align: center; border-radius: 13px; background: #f6f9ff; border: 1px solid #e2eaff; }
+        .muted { color: #64748b; font-size: 13px; }
+        .amount { margin-top: 8px; font-size: 32px; font-weight: 800; letter-spacing: -.7px; }
+        .details { margin: 23px 0; }
+        .detail { display: flex; justify-content: space-between; gap: 15px; padding: 14px 0; border-bottom: 1px solid #edf1f6; font-size: 14px; }
+        .detail:last-child { border-bottom: 0; }
+        .detail strong { text-align: right; overflow-wrap: anywhere; }
+        .notice { padding: 13px; border-radius: 10px; background: #fff7ed; color: #9a3412; font-size: 12px; line-height: 1.6; }
+        .btn { display: block; width: 100%; margin-top: 18px; padding: 15px; border: 0; border-radius: 10px; background: #2563eb; color: #fff; text-align: center; text-decoration: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .btn:hover { background: #1d4ed8; }
+        .back { display: block; margin-top: 17px; color: #64748b; text-align: center; text-decoration: none; font-size: 13px; }
+        .footer { margin-top: 24px; padding-top: 17px; border-top: 1px solid #edf1f6; color: #64748b; text-align: center; font-size: 11px; }
+        @media (max-width: 480px) { .container { margin: 5px auto; padding: 23px 18px; } .amount { font-size: 28px; } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <span class="badge">PAYMENT CONFIRMATION</span>
-        <h1>Confirm your <?= $escapedMethod ?> payment</h1>
-        <p class="subtitle">Review your payment details before continuing to Xendit's payment page.</p>
+    <main class="container">
+        <div class="brand"><span class="brand-icon">X</span> Xendit Checkout</div>
 
-        <div class="amount">
-            <small>Total payment</small>
-            <strong>₱<?= $escapedAmount ?></strong>
+        <div class="icon"><?= $method === 'GCASH' ? 'G' : 'M' ?></div>
+        <h1>Confirm your payment</h1>
+        <p class="subtitle">Review your payment details before continuing to the payment provider.</p>
+
+        <div class="amount-box">
+            <div class="muted">Total payment amount</div>
+            <div class="amount">₱<?= htmlspecialchars($formattedAmount, ENT_QUOTES, 'UTF-8') ?></div>
         </div>
 
-        <div class="detail"><span>Payment method</span><span><?= $escapedMethod ?></span></div>
-        <div class="detail"><span>Mobile number</span><span><?= $escapedNumber ?></span></div>
+        <div class="details">
+            <div class="detail"><span class="muted">Payment method</span><strong><?= htmlspecialchars($provider, ENT_QUOTES, 'UTF-8') ?></strong></div>
+            <div class="detail"><span class="muted">Mobile number</span><strong><?= htmlspecialchars($maskedNumber, ENT_QUOTES, 'UTF-8') ?></strong></div>
+            <div class="detail"><span class="muted">Payment status</span><strong>Awaiting payment</strong></div>
+        </div>
 
-        <div class="notice"><strong>Important:</strong> This is a confirmation screen for your checkout. No payment has been made yet. You will continue to Xendit to complete the actual payment. Never enter your wallet PIN or OTP on this page.</div>
+        <div class="notice">Please verify that the mobile number belongs to your <?= htmlspecialchars($provider, ENT_QUOTES, 'UTF-8') ?> account. Your payment is not complete until the provider confirms it.</div>
 
-        <form action="create_payment.php" method="POST">
-            <input type="hidden" name="amount" value="<?= $escapedAmount ?>">
-            <input type="hidden" name="channel_code" value="<?= $escapedChannel ?>">
+        <form action="app/classes/controllers/XenditControlller.php?action=createPayment" method="POST" id="confirmForm">
+            <input type="hidden" name="amount" value="<?= htmlspecialchars((string) $amount, ENT_QUOTES, 'UTF-8') ?>">
+            <input type="hidden" name="payment_method" value="<?= htmlspecialchars($method, ENT_QUOTES, 'UTF-8') ?>">
+            <input type="hidden" name="wallet_number" value="<?= htmlspecialchars($walletNumber, ENT_QUOTES, 'UTF-8') ?>">
             <input type="hidden" name="wallet_confirmed" value="1">
-            <?php if ($channelCode === "GCASH"): ?>
-                <input type="hidden" name="gcash_number" value="<?= $escapedWalletNumber ?>">
-            <?php else: ?>
-                <input type="hidden" name="maya_number" value="<?= $escapedWalletNumber ?>">
-            <?php endif; ?>
-            <button type="submit">Confirm and Continue to Xendit</button>
+            <button class="btn" id="confirmBtn" type="submit">Confirm and Continue →</button>
         </form>
 
-        <a class="back" href="index.php">Cancel and Return to Checkout</a>
-    </div>
+        <a class="back" href="index.php">← Go back to checkout</a>
+        <div class="footer">Payments are processed securely by Xendit.</div>
+    </main>
+
+    <script>
+        document.getElementById('confirmForm').addEventListener('submit', function () {
+            const button = document.getElementById('confirmBtn');
+            button.disabled = true;
+            button.textContent = 'Connecting to payment provider...';
+        });
+    </script>
 </body>
 </html>
